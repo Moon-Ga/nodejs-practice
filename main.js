@@ -1,12 +1,14 @@
 const http = require("http");
-const fs = require("fs");
+// const fs = require("fs");
+
 const app = http.createServer((req, res) => {
-  let url = req.url;
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const query = url.searchParams;
   if (req.url === "/") {
-    url = "/index.html";
+    req.url = "/index.html";
   }
   res.writeHead(200);
-  res.end(fs.readFileSync(__dirname + url));
+  res.end(query.get("id"));
 });
 
 app.listen(3000);
