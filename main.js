@@ -5,12 +5,14 @@ const app = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const query = url.searchParams;
   const id = query.get("id");
+  const pathname = url.pathname;
   if (req.url === "/") {
     req.url = "/index.html";
   }
-  res.writeHead(200);
-  fs.readFile(`data/${id}`, "utf-8", (err, data) => {
-    const template = `
+
+  if (pathname === "/") {
+    fs.readFile(`data/${id}`, "utf-8", (err, data) => {
+      const template = `
     <!DOCTYPE html>
     <html>
       <head>
@@ -28,8 +30,13 @@ const app = http.createServer((req, res) => {
       </body>
     </html>
     `;
-    res.end(template);
-  });
+      res.writeHead(200);
+      res.end(template);
+    });
+  } else {
+    res.writeHead(404);
+    res.end("404(Not Found)");
+  }
 });
 
 app.listen(3000);
