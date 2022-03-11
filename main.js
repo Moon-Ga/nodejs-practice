@@ -6,30 +6,32 @@ const app = http.createServer((req, res) => {
   const query = url.searchParams;
   const id = query.get("id");
   const pathname = url.pathname;
-  if (req.url === "/") {
-    req.url = "/index.html";
-  }
 
   if (pathname === "/") {
-    fs.readFile(`data/${id}`, "utf-8", (err, data) => {
+    let list = "<ol>";
+    let filelist = fs.readdirSync("./data");
+    for (let i = 0; i < filelist.length; i++) {
+      list = list + `<li><a href="/?id=${filelist[i]}">${i + 1}번째</a></li>`;
+    }
+    list = list + "</ol>";
+    fs.readFile(`./data/${id}`, "utf-8", (err, data) => {
+      if (id === null) {
+        data = "어서오세요 문가네입니다.";
+      }
       const template = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>문가네</title>
-        <meta charset="utf-8" />
-      </head>
-      <body>
-        <h1><a href="/">문가네</a></h1>
-        <ol>
-          <li><a href="/?id=1-first">첫번째</a></li>
-          <li><a href="/?id=2-second">두번째</a></li>
-          <li><a href="/?id=3-third">세번째</a></li>
-        </ol>
-        ${data}
-      </body>
-    </html>
-    `;
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>문가네</title>
+          <meta charset="utf-8" />
+        </head>
+        <body>
+          <h1><a href="/">문가네</a></h1>
+          ${list}
+          ${data}
+        </body>
+      </html>
+      `;
       res.writeHead(200);
       res.end(template);
     });
