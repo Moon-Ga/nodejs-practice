@@ -6,35 +6,60 @@ const app = http.createServer((req, res) => {
   const query = url.searchParams;
   const id = query.get("id");
   const pathname = url.pathname;
+  const dataList = fs.readdirSync("./data");
+  console.log(url);
 
-  if (pathname === "/") {
+  const createList = (filelist) => {
     let list = "<ol>";
-    let filelist = fs.readdirSync("./data");
     for (let i = 0; i < filelist.length; i++) {
       list = list + `<li><a href="/?id=${filelist[i]}">${i + 1}번째</a></li>`;
     }
     list = list + "</ol>";
+    return list;
+  };
+
+  const htmlTemplate = (content) => {
+    return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>문가네</title>
+        <meta charset="utf-8" />
+      </head>
+      <body>
+        <h1><a href="/">문가네</a></h1>
+        ${createList(dataList)}
+        <a href="/create">글 생성</a>
+        ${content}
+      </body>
+    </html>
+    `;
+  };
+
+  if (pathname === "/") {
     fs.readFile(`./data/${id}`, "utf-8", (err, data) => {
       if (id === null) {
         data = "어서오세요 문가네입니다.";
       }
-      const template = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>문가네</title>
-          <meta charset="utf-8" />
-        </head>
-        <body>
-          <h1><a href="/">문가네</a></h1>
-          ${list}
-          ${data}
-        </body>
-      </html>
-      `;
+      const template = htmlTemplate(data);
       res.writeHead(200);
       res.end(template);
     });
+  } else if (pathname === "/create") {
+    const content = `
+    <form action="${url.origin}/create_action" method="post">
+      <p><input type="text" name="title" placeholder="제목" /></p>
+      <p>
+        <textarea name="content" placeholder="내용" style="resize:none"></textarea>
+      </p>
+      <p>
+        <input type="submit" />
+      </p>
+    </form>
+    `;
+    const template = htmlTemplate(content);
+    res.writeHead(200);
+    res.end(template);
   } else {
     res.writeHead(404);
     res.end("404(Not Found)");
