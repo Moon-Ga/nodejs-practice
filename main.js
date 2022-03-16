@@ -7,7 +7,6 @@ const app = http.createServer((req, res) => {
   const id = query.get("id");
   const pathname = url.pathname;
   const dataList = fs.readdirSync("./data");
-  console.log(url);
 
   const createList = (filelist) => {
     let list = "<ol>";
@@ -60,6 +59,19 @@ const app = http.createServer((req, res) => {
     const template = htmlTemplate(content);
     res.writeHead(200);
     res.end(template);
+  } else if (pathname === "/create_action") {
+    let body = "";
+    req.on("data", (data) => {
+      body = body + data;
+    });
+    req.on("end", () => {
+      const post = new URLSearchParams(body);
+      const title = post.get("title");
+      const content = post.get("content");
+      fs.writeFileSync(`data/${title}`, content);
+      res.writeHead(303, { Location: encodeURI(`/?id=${title}`) });
+      res.end();
+    });
   } else {
     res.writeHead(404);
     res.end("404(Not Found)");
