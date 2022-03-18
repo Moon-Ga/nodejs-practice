@@ -1,5 +1,7 @@
 const http = require("http");
 const fs = require("fs");
+const path = require("path");
+const sanitizeHtml = require("sanitize-html");
 
 const app = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -17,7 +19,7 @@ const app = http.createServer((req, res) => {
     return list;
   };
 
-  const htmlTemplate = (content, update) => {
+  const htmlTemplate = (content, update, remove) => {
     return `
     <!DOCTYPE html>
     <html>
@@ -29,7 +31,8 @@ const app = http.createServer((req, res) => {
         <h1><a href="/">문가네</a></h1>
         ${createList(dataList)}<br />
         <a href="/create">글 생성</a>
-        ${update ? update : ""}<br/>
+        ${update ? update : ""}
+        ${remove ? remove : ""}<br />
         ${content}
       </body>
     </html>
@@ -37,7 +40,8 @@ const app = http.createServer((req, res) => {
   };
 
   if (pathname === "/") {
-    fs.readFile(`./data/${id}`, "utf-8", (err, data) => {
+    const safeId = id && path.parse(id).base;
+    fs.readFile(`./data/${safeId}`, "utf-8", (err, data) => {
       if (id === null) {
         data = "어서오세요 문가네입니다.";
       }
@@ -46,7 +50,15 @@ const app = http.createServer((req, res) => {
       <a href="/update?id=${id}">글 수정</a>
       `
         : null;
-      const template = htmlTemplate(data, update);
+      const remove = id
+        ? `
+      <form action="delete_action" method="post">
+        <input type="hidden" name="title" value="${id}" />
+        <input type="submit" value="글 삭제" />
+      </form>
+      `
+        : null;
+      const template = htmlTemplate(data, update, remove);
       res.writeHead(200);
       res.end(template);
     });
@@ -75,12 +87,14 @@ const app = http.createServer((req, res) => {
       const post = new URLSearchParams(body);
       const title = post.get("title");
       const content = post.get("content");
-      fs.writeFileSync(`data/${title}`, content);
+      const sanitizedContent = sanitizeHtml(content);
+      fs.writeFileSync(`data/${title}`, sanitizedContent);
       res.writeHead(303, { Location: encodeURI(`/?id=${title}`) });
       res.end();
     });
   } else if (pathname === "/update") {
-    fs.readFile(`./data/${id}`, "utf-8", (err, data) => {
+    const safeId = path.parse(id).base;
+    fs.readFile(`./data/${safeId}`, "utf-8", (err, data) => {
       const update = `
       <a href="/?id=${id}">수정 취소</a>
       `;
@@ -114,6 +128,18 @@ const app = http.createServer((req, res) => {
       fs.renameSync(`data/${filename}`, `data/${title}`);
       fs.writeFileSync(`data/${title}`, content);
       res.writeHead(303, { Location: encodeURI(`/?id=${title}`) });
+      res.end();
+    });
+  } else if (pathname === "/delete_action") {
+    let body = "";
+    req.on("data", (data) => {
+      body = body + data;
+    });
+    req.on("end", () => {
+      const post = new URLSearchParams(body);
+      const title = post.get("title");
+      fs.unlinkSync(`data/${title}`);
+      res.writeHead(303, { Location: "/" });
       res.end();
     });
   } else {
